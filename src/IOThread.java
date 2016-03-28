@@ -27,6 +27,7 @@ public class IOThread extends Thread {
     private byte[] sessionKey;
     private SecretKey secretKey = null;
     private X509Certificate certificate;
+    private boolean otherPartyIsLCP = false;
 
     public IOThread(Socket socket) {
         super("IOThread");
@@ -118,10 +119,16 @@ public class IOThread extends Thread {
     }
 
     private void revoke(ObjectInputStream in, ObjectOutputStream out) throws IOException, ClassNotFoundException {
+        // setup secure connection
+        setupSecureConnection(in, out);
+
         // Certificaat inlezen
         X509Certificate cert = loadCertificate(in, out, true);
-        Databank.getInstance().addRevocation(cert.getSerialNumber());
 
+        if (otherPartyIsLCP) {
+            Databank.getInstance().addRevocation(cert.getSerialNumber());
+            System.out.println("Revocation added");
+        } else System.out.println("Not talking to LCP, ignoring request.");
     }
 
     private void isCertificateRevoked(ObjectInputStream in, ObjectOutputStream out) throws IOException, ClassNotFoundException {
@@ -170,6 +177,11 @@ public class IOThread extends Thread {
         // Lees certificaat van andere partij in, check of juist en lees public key
         X509Certificate certificateOtherParty = loadCertificate(in, out, false);
         PublicKey publicKeyOtherParty = certificateOtherParty.getPublicKey();
+        if (certificateOtherParty.getSubjectX500Principal().getName().equals("www.LCP.be")) {
+            System.out.println("Other party is LCP");
+            otherPartyIsLCP = true;
+        }
+
 
         sessionKey = generateSessionKey(publicKeyOtherParty.getEncoded());
         /*System.out.println("Received W (Public Key other party) (length: "+
