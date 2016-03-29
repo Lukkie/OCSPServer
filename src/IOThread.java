@@ -1,5 +1,9 @@
+import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.cert.X509v1CertificateBuilder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509v1CertificateBuilder;
 import org.bouncycastle.jce.interfaces.ECPrivateKey;
 import org.bouncycastle.jce.interfaces.ECPublicKey;
@@ -106,7 +110,8 @@ public class IOThread extends Thread {
 
     private X509Certificate loadCertificate(ObjectInputStream in, ObjectOutputStream out, boolean encrypted) throws IOException, ClassNotFoundException {
         byte[] certificateByteArray = (byte[]) in.readObject();
-        if (encrypted) certificateByteArray = Arrays.copyOfRange(Tools.decrypt(certificateByteArray, secretKey),0,413);
+        if (encrypted) certificateByteArray = Arrays.copyOfRange(Tools.decrypt(certificateByteArray, secretKey),0,576); // 576 kan verkeerd zijn? Not sure
+        Tools.printByteArray(certificateByteArray);
         X509Certificate certificate = null;
         try {
             CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
@@ -126,8 +131,8 @@ public class IOThread extends Thread {
         X509Certificate cert = loadCertificate(in, out, true);
 
         if (otherPartyIsLCP) {
-            Databank.getInstance().addRevocation(cert.getSerialNumber());
-            System.out.println("Revocation added");
+            Databank.getInstance().addRevocation(cert);
+            System.out.println("Revocation added for serial "+cert.getSerialNumber().toString());
         } else System.out.println("Not talking to LCP, ignoring request.");
     }
 
@@ -137,7 +142,8 @@ public class IOThread extends Thread {
 
         // Certificaat inlezen
         X509Certificate cert = loadCertificate(in, out, false);
-        boolean isRevoked = Databank.getInstance().isRevoked(cert.getSerialNumber());
+        System.out.println("Checking if certificate with serial number "+cert.getSerialNumber()+" is revoked.");
+        boolean isRevoked = Databank.getInstance().isRevoked(cert);
         byte[] answer = new byte[1];
         answer[0] = (isRevoked? (byte)0x00 : (byte)0x01);
 
@@ -177,7 +183,17 @@ public class IOThread extends Thread {
         // Lees certificaat van andere partij in, check of juist en lees public key
         X509Certificate certificateOtherParty = loadCertificate(in, out, false);
         PublicKey publicKeyOtherParty = certificateOtherParty.getPublicKey();
-        if (certificateOtherParty.getSubjectX500Principal().getName().equals("www.LCP.be")) {
+
+        // Determine name of subject of certificate
+        X500Name x500name = null;
+        try {
+            x500name = new JcaX509CertificateHolder(certificateOtherParty).getSubject();
+        } catch (CertificateEncodingException e) {
+            e.printStackTrace();
+        }
+        RDN cn = x500name.getRDNs(BCStyle.CN)[0];
+
+        if (IETFUtils.valueToString(cn.getFirst().getValue()).equals("www.LCP.be")) {
             System.out.println("Other party is LCP");
             otherPartyIsLCP = true;
         }
