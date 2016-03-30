@@ -110,7 +110,12 @@ public class IOThread extends Thread {
 
     private X509Certificate loadCertificate(ObjectInputStream in, ObjectOutputStream out, boolean encrypted) throws IOException, ClassNotFoundException {
         byte[] certificateByteArray = (byte[]) in.readObject();
-        if (encrypted) certificateByteArray = Arrays.copyOfRange(Tools.decrypt(certificateByteArray, secretKey),0,576); // 576 kan verkeerd zijn? Not sure
+        if (encrypted) {
+            // spaghetticode
+            if (certificateByteArray[577] == (byte)0x00) certificateByteArray = Arrays.copyOfRange(Tools.decrypt(certificateByteArray, secretKey),0,576);
+            else certificateByteArray = Arrays.copyOfRange(Tools.decrypt(certificateByteArray, secretKey),0,587);
+             // 576 kan verkeerd zijn? Not sure. -> 587 soms
+        }
         Tools.printByteArray(certificateByteArray);
         X509Certificate certificate = null;
         try {
@@ -150,12 +155,27 @@ public class IOThread extends Thread {
         // Aan de hand van requester: RSA of AES
         if (requester.equals("LCP") || requester.equals("Shop")) { // AES
             setupSecureConnection(in, out);
+
+            // certificaat terugsturen ter bevestiging
+            try {
+                out.writeObject(Tools.encryptMessage(Tools.applyPadding(cert.getEncoded()), secretKey));
+            } catch (CertificateEncodingException e) {
+                e.printStackTrace();
+            }
+
+            // Antwoord op vraag sturen
             out.writeObject(Tools.encryptMessage(Tools.applyPadding(answer), secretKey));
         }
         else if (requester.equals("Middleware")) { // RSA
             try {
                 PublicKey publicKey = Tools.getPublicRSAKeyFromBytes(Tools.pubKeyMW);
-                byte[] toBeSent = Crypto.encryptWithPublicKeyRSA(answer, publicKey);
+
+                // certificaat terugsturen ter bevestiging
+                byte[] toBeSent = Crypto.encryptWithPublicKeyRSA(cert.getEncoded(), publicKey);
+                out.writeObject(toBeSent);
+
+                // Antwoord op vraag sturen
+                toBeSent = Crypto.encryptWithPublicKeyRSA(answer, publicKey);
                 out.writeObject(toBeSent);
             } catch (Exception e) {
                 e.printStackTrace();
