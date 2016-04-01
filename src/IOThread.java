@@ -149,6 +149,8 @@ public class IOThread extends Thread {
         X509Certificate cert = loadCertificate(in, out, false);
         System.out.println("Checking if certificate with serial number "+cert.getSerialNumber()+" is revoked.");
         boolean isRevoked = Databank.getInstance().isRevoked(cert);
+        if (isRevoked) System.out.println("Received certificate is REVOKED!");
+        else System.out.println("Received certificate is valid.");
         byte[] answer = new byte[1];
         answer[0] = (isRevoked? (byte)0x00 : (byte)0x01);
 
