@@ -69,8 +69,10 @@ public class Crypto {
 
     public static byte[] encryptWithAES(byte[] data, SecretKey key) {
         try {
+            byte[] ivdata = new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+            IvParameterSpec spec = new IvParameterSpec(ivdata);
             Cipher cipherAes = Cipher.getInstance("AES/CBC/PKCS7Padding");
-            cipherAes.init(Cipher.ENCRYPT_MODE, key);
+            cipherAes.init(Cipher.ENCRYPT_MODE, key, spec);
             byte[] encryptedBytes = cipherAes.doFinal(data);
             return encryptedBytes;
         } catch (Exception e) {
