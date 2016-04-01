@@ -170,12 +170,18 @@ public class IOThread extends Thread {
             try {
                 PublicKey publicKey = Tools.getPublicRSAKeyFromBytes(Tools.pubKeyMW);
 
+                // Symmetrische key genereren en doorsturen met publicKey
+                SecretKey key = KeyGenerator.getInstance("AES").generateKey();
+                out.writeObject(Crypto.encryptWithPublicKeyRSA(key.getEncoded(), publicKey));
+
+
                 // certificaat terugsturen ter bevestiging
-                byte[] toBeSent = Crypto.encryptWithPublicKeyRSA(cert.getEncoded(), publicKey);
+               // byte[] toBeSent = Crypto.encryptWithPublicKeyRSA(cert.getEncoded(), publicKey);
+                byte[] toBeSent = Crypto.encryptWithAES(cert.getEncoded(), key);
                 out.writeObject(toBeSent);
 
                 // Antwoord op vraag sturen
-                toBeSent = Crypto.encryptWithPublicKeyRSA(answer, publicKey);
+                toBeSent = Crypto.encryptWithAES(answer, key);
                 out.writeObject(toBeSent);
             } catch (Exception e) {
                 e.printStackTrace();

@@ -46,20 +46,20 @@ public class Databank {
 
 
     public boolean isRevoked(X509Certificate cert) {
-        try {
-            System.out.print("Checking cert: ");
-            Tools.printByteArray(cert.getEncoded());
+//        try {
+            //System.out.print("Checking cert: ");
+            //Tools.printByteArray(cert.getEncoded());
             for (X509Certificate bi : revocations) {
 
-                System.out.print("Checking with DB entry: ");
-                Tools.printByteArray(bi.getEncoded());
+                //System.out.print("Checking with DB entry: ");
+                //Tools.printByteArray(bi.getEncoded());
                 if (bi.equals(cert)) return true;
             }
 
-        }
-        catch (CertificateEncodingException e) {
-            e.printStackTrace();
-        }
+//        }
+//        catch (CertificateEncodingException e) {
+//            e.printStackTrace();
+//        }
         return false;
     }
 
