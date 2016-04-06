@@ -11,6 +11,8 @@ public class Main {
 
     public static void main(String[] args) {
         Security.addProvider(new BouncyCastleProvider());
+        new Thread(new GUIStarter()).start();
+
         int portNumber = 26262;
         IOThread ioThread = null;
         try (ServerSocket serverSocket = new ServerSocket(portNumber)) {
@@ -23,5 +25,7 @@ public class Main {
             System.err.println("Could not listen on port " + portNumber);
             System.exit(-1);
         }
+
+
     }
 }
